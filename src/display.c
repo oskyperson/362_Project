@@ -6,15 +6,16 @@
 #include "hardware/timer.h"
 
 //FOR USE WITH ST7789 CONTROLLER
+//the controller is ili9341
 
-#define MOSI 19
-#define SCK 18
-#define CS 17
+#define MOSI 15
+#define SCK 14
+#define CS 13
 #define DC 20
 #define RST 21
 
 #define TFT_WIDTH 240
-#define TFT_HEIGHT 240
+#define TFT_HEIGHT 320 //changed to 320 from 240
 
 #define NOP 0x00
 #define SWRESET 0x01
@@ -50,21 +51,21 @@ uint8_t maze[MAZE_HEIGHT][MAZE_WIDTH];
 static inline void tft_write_cmd(uint8_t cmd) {
     gpio_put(CS, 0);
     gpio_put(DC, 0);
-    spi_write_blocking(spi0, &cmd, 1);
+    spi_write_blocking(spi1, &cmd, 1);
     gpio_put(CS, 1);
 }
 
 static inline void tft_write_data(uint8_t data) {
     gpio_put(CS, 0);
     gpio_put(DC, 1);
-    spi_write_blocking(spi0, &data, 1);
+    spi_write_blocking(spi1, &data, 1);
     gpio_put(CS, 1);
 }
 
 static inline void tft_write_data_block(uint8_t *data, size_t len) {
     gpio_put(CS, 0);
     gpio_put(DC, 1);
-    spi_write_blocking(spi0, data, len);
+    spi_write_blocking(spi1, data, len);
     gpio_put(CS, 1);
 }
 
@@ -101,7 +102,7 @@ void tft_init() {
     sleep_ms(10);
 
     tft_write_cmd(MADCTL);
-    tft_write_data(0x00);
+    tft_write_data(0x48); //changed to 0x48 from 0x00
 
     tft_write_cmd(INVON);
     sleep_ms(10);
@@ -138,7 +139,7 @@ void tft_fill_rect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color) {
         if (i % (BUF_SIZE / 2) == 0) {
             uint32_t remaining = total_pixels - i;
             uint32_t chunk_len = (remaining * 2 > BUF_SIZE) ? BUF_SIZE : (remaining * 2);
-            spi_write_blocking(spi0, buf, chunk_len);
+            spi_write_blocking(spi1, buf, chunk_len);
         }
     }
     
@@ -211,7 +212,7 @@ void draw_maze() {
             }
 
             uint8_t pixel_data[] = {color >> 8, color & 0xFF};
-            spi_write_blocking(spi0, pixel_data, 2);
+            spi_write_blocking(spi1, pixel_data, 2);
         }
     }
 
@@ -222,8 +223,9 @@ int main() {
     stdio_init_all();
     sleep_ms(1000);
     printf("Initializing\n");
+    fflush(stdout); 
 
-    spi_init(spi0, 80000 * 1000);
+    spi_init(spi1, 10 * 1000 * 1000); //changed
     gpio_set_function(SCK, GPIO_FUNC_SPI);
     gpio_set_function(MOSI, GPIO_FUNC_SPI);
 
