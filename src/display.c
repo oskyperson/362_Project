@@ -47,6 +47,13 @@
 #define PATH 0
 
 uint8_t maze[MAZE_HEIGHT][MAZE_WIDTH];
+int player_row = 1;
+int player_col = 1;
+extern uint adc_x_raw;
+extern uint adc_y_raw;
+extern void joystick_init(void);
+extern void joystick_read(void);
+
 
 static inline void tft_write_cmd(uint8_t cmd) {
     gpio_put(CS, 0);
@@ -219,6 +226,28 @@ void draw_maze() {
     gpio_put(CS, 1);
 }
 
+void draw_player() {
+    int new_row = player_row;
+    int new_col = player_col;
+
+    // Values go from 0 to 4096, 2048 is the center
+    if(adc_x_raw < 1900) new_col--;
+    else if(adc_x_raw > 2200) new_col++;
+    if(adc_y_raw < 1900) new_row--;
+    else if(adc_y_raw > 2200) new_row++;
+
+    // Check if valid (very long but I couldn't think of a better way)
+    if(new_row > 0 && new_row < MAZE_HEIGHT && new_col > 0 && new_col < MAZE_WIDTH && (new_row != player_row || new_col != player_col) && maze[new_row][new_col] == PATH) {
+
+        tft_fill_rect(player_col * CELL_WIDTH, player_row * CELL_HEIGHT, CELL_WIDTH, CELL_HEIGHT, COLOR_WHITE); 
+
+        player_row = new_row;
+        player_col = new_col;
+
+        tft_fill_rect(player_col * CELL_WIDTH, player_row * CELL_HEIGHT, CELL_WIDTH, CELL_HEIGHT, COLOR_RED);
+    }
+}
+
 int main() {
     stdio_init_all();
     sleep_ms(1000);
@@ -261,8 +290,11 @@ int main() {
 
     printf("Done\n");
 
+    joystick_init();
+
     while (1) {
-        tight_loop_contents();
+        joystick_read();
+        draw_player();
     }
 
     return 0;
