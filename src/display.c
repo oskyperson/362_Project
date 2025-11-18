@@ -49,6 +49,7 @@
 uint8_t maze[MAZE_HEIGHT][MAZE_WIDTH];
 int player_row = 1;
 int player_col = 1;
+int moves = 0;
 extern uint adc_x_raw;
 extern uint adc_y_raw;
 extern void joystick_init(void);
@@ -243,6 +244,7 @@ void draw_player() {
 
         player_row = new_row;
         player_col = new_col;
+        moves++;
 
         tft_fill_rect(player_col * CELL_WIDTH, player_row * CELL_HEIGHT, CELL_WIDTH, CELL_HEIGHT, COLOR_RED);
     }
@@ -295,6 +297,7 @@ int main() {
     while (1) {
         joystick_read();
         draw_player();
+        sleep_ms(50);
     }
 
     return 0;
