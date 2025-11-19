@@ -312,9 +312,6 @@ int main() {
     tft_fill_rect(player_col * CELL_WIDTH, player_row * CELL_HEIGHT, CELL_WIDTH, CELL_HEIGHT, COLOR_RED);
     joystick_init();
 
-    tft_fill_rect(player_col * CELL_WIDTH, player_row * CELL_HEIGHT, CELL_WIDTH, CELL_HEIGHT, COLOR_RED);
-    joystick_init();
-
     while (1) {
         tight_loop_contents();
         joystick_read();

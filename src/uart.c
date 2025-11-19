@@ -26,36 +26,64 @@ void init_uart() {
 }
 
 void init_uart_irq() {
-    uart_set_fifo_enabled (uart0, false);
-    int UART_IRQ = UART0_IRQ;
-    uart0_hw->imsc = 1 << UART_UARTIMSC_RXIM_LSB;
-    irq_set_exclusive_handler(UART_IRQ, uart_rx_handler);
-    irq_set_enabled(UART_IRQ, true);
+    // uart_set_fifo_enabled (uart0, false);
+    // int UART_IRQ = UART0_IRQ;
+    // uart0_hw->imsc = 1 << UART_UARTIMSC_RXIM_LSB;
+    // irq_set_exclusive_handler(UART_IRQ, uart_rx_handler);
+    // irq_set_enabled(UART_IRQ, true);
+    // uart_set_irq_enables(uart0, true, false);
+
+    uart_set_fifo_enabled(uart0, false);
     uart_set_irq_enables(uart0, true, false);
+    irq_set_exclusive_handler(UART0_IRQ, uart_rx_handler);
+    irq_set_enabled(UART0_IRQ, true);
 }
 
 void uart_rx_handler() {
     // fill in.
-    hw_clear_bits(&uart_get_hw(uart0)->icr, 1u << 0);
-    if(seridx >= BUFSIZE){
+    // hw_clear_bits(&uart_get_hw(uart0)->icr, 1u << 0);
+    // if(seridx >= BUFSIZE){
+    //     return;
+    // }
+    // char c = uart0_hw->dr;
+    // if (c == 0x0A){
+    //     newline_seen = 1;
+    // }
+
+    // if(c == 8){
+    //     uart_putc(uart0, 8);
+    //     uart_putc(uart0, 32);
+    //     uart_putc(uart0, 8);
+    //     seridx = seridx > 0? seridx - 1 : seridx;
+    //     serbuf[seridx] = '\0';
+    //     return;
+    // }
+    // else{
+    //     printf("%c", c);
+    //     serbuf[seridx++] = c;
+    // }
+
+    uart_get_hw(uart0)->icr = 33;
+
+    if (seridx >= BUFSIZE)
         return;
-    }
-    char c = uart0_hw->dr;
-    if (c == 0x0A){
+
+    char d = uart_get_hw(uart0)->dr;  
+
+    if (d == '\n') {
         newline_seen = 1;
     }
 
-    if(c == 8){
-        uart_putc(uart0, 8);
+    if (d == 8 && seridx > 0) {
+        uart_putc(uart0, 8);  
         uart_putc(uart0, 32);
-        uart_putc(uart0, 8);
-        seridx = seridx > 0? seridx - 1 : seridx;
+        uart_putc(uart0, 8);  
+        seridx--;              
         serbuf[seridx] = '\0';
-        return;
-    }
-    else{
-        printf("%c", c);
-        serbuf[seridx++] = c;
+    } else {
+        uart_putc(uart0, d);       
+        serbuf[seridx] = d; 
+        seridx++; 
     }
 }
 
@@ -68,22 +96,30 @@ int _read(__unused int handle, char *buffer, int length) {
         newline_seen = 0;
     }
 
-    for(int i = 0; i< seridx; i++){
-        buffer[i] = serbuf[i];
+    int itr = length >= seridx ? seridx : length;
+
+    for (int i = 0; i < itr; i++) {
+        buffer[i] = serbuf[i]; 
     }
     seridx = 0;
+
     return length;
 }
 
 int _write(int handle, char *buffer, int length) {
-    for (int i = 0; i < length; i++){
-        if (buffer[i] != '\0'){
-           uart_putc(uart0, buffer[i]);
-        }
-        else{
-            break;
-        }
+    // for (int i = 0; i < length; i++){
+    //     if (buffer[i] != '\0'){
+    //        uart_putc(uart0, buffer[i]);
+    //     }
+    //     else{
+    //         break;
+    //     }
+    // }
+
+    for (int i = 0; i < length; i++) {
+        uart_putc(uart0, buffer[i]); 
     }
+    return length;
 }
 
 /*******************************************************************/
