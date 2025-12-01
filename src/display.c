@@ -5,6 +5,7 @@
 #include "hardware/gpio.h"
 #include "hardware/timer.h"
 #include "hardware/adc.h"
+#include "buzzer.h"
 
 //FOR USE WITH ST7789 CONTROLLER
 //the controller is ili9341
@@ -255,7 +256,11 @@ void draw_player() {
     else if(adc_y_raw > 2500) new_row++;
 
     // Check if valid (very long but I couldn't think of a better way)
-    if(new_row > 0 && new_row < MAZE_HEIGHT && new_col > 0 && new_col < MAZE_WIDTH && (new_row != player_row || new_col != player_col) && maze[new_row][new_col] == 1) {
+    if(new_row > 0 && new_row < MAZE_HEIGHT && new_col > 0 && new_col < MAZE_WIDTH && (new_row != player_row || new_col != player_col)) {
+        if(maze[new_row][new_col] == WALL) {
+            buzzer_play_tone(1000, 100);
+            return;
+        }
 
         tft_fill_rect(player_col * CELL_WIDTH, player_row * CELL_HEIGHT, CELL_WIDTH, CELL_HEIGHT, COLOR_BLUE); 
 
@@ -264,6 +269,12 @@ void draw_player() {
         moves++;
 
         tft_fill_rect(player_col * CELL_WIDTH, player_row * CELL_HEIGHT, CELL_WIDTH, CELL_HEIGHT, COLOR_RED);
+
+        if(player_col == MAZE_WIDTH && player_row == MAZE_HEIGHT) {
+            const uint32_t freqs[] = {523, 659, 784, 1046}; // C5, E5, G5, C6
+            const uint32_t durs[] = {200, 200, 200, 400};
+            buzzer_play_sequence(freqs, durs, 4);
+        }
     }
 }
 
@@ -286,6 +297,8 @@ int main() {
 
     gpio_init(RST);
     gpio_set_dir(RST, GPIO_OUT);
+
+    buzzer_init(15); // change whatever the buzzer pin is
 
     printf("SPI and GPIO initialized\n");
 
@@ -316,6 +329,7 @@ int main() {
         tight_loop_contents();
         joystick_read();
         draw_player();
+        buzzer_update();
         sleep_ms(225);
         
     }

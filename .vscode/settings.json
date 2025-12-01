@@ -2,6 +2,7 @@
     "files.associations": {
         "adc.h": "c",
         "resets.h": "c",
-        "dma.h": "c"
+        "dma.h": "c",
+        "buzzer.h": "c"
     }
 }
