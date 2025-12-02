@@ -259,21 +259,21 @@ void draw_player() {
     if(new_row > 0 && new_row < MAZE_HEIGHT && new_col > 0 && new_col < MAZE_WIDTH && (new_row != player_row || new_col != player_col)) {
         if(maze[new_row][new_col] == WALL) {
             buzzer_play_tone(1000, 100);
-            return;
-        }
+        } else {
 
-        tft_fill_rect(player_col * CELL_WIDTH, player_row * CELL_HEIGHT, CELL_WIDTH, CELL_HEIGHT, COLOR_BLUE); 
+            tft_fill_rect(player_col * CELL_WIDTH, player_row * CELL_HEIGHT, CELL_WIDTH, CELL_HEIGHT, COLOR_BLUE); 
 
-        player_row = new_row;
-        player_col = new_col;
-        moves++;
+            player_row = new_row;
+            player_col = new_col;
+            moves++;
 
-        tft_fill_rect(player_col * CELL_WIDTH, player_row * CELL_HEIGHT, CELL_WIDTH, CELL_HEIGHT, COLOR_RED);
+            tft_fill_rect(player_col * CELL_WIDTH, player_row * CELL_HEIGHT, CELL_WIDTH, CELL_HEIGHT, COLOR_RED);
 
-        if(player_col == MAZE_WIDTH - 1 && player_row == MAZE_HEIGHT - 2) {
-            const uint32_t freqs[] = {523, 659, 784, 1046}; // C5, E5, G5, C6
-            const uint32_t durs[] = {200, 200, 200, 400};
-            buzzer_play_sequence(freqs, durs, 4);
+            if(player_col == MAZE_WIDTH - 1 && player_row == MAZE_HEIGHT - 2) {
+                const uint32_t freqs[] = {523, 659, 784, 1046}; // C5, E5, G5, C6
+                const uint32_t durs[] = {200, 200, 200, 400};
+                buzzer_play_sequence(freqs, durs, 4);
+            }
         }
     }
 }
