@@ -55,7 +55,7 @@
 
 uint8_t maze[MAZE_HEIGHT][MAZE_WIDTH];
 int player_row = 1;
-int player_col = 1;
+int player_col = 0;
 int moves = 0;
 
 uint adc_x_raw;
@@ -255,7 +255,7 @@ void draw_player() {
     if(adc_y_raw < 1500) new_row--;
     else if(adc_y_raw > 2500) new_row++;
 
-    // Check if valid (very long but I couldn't think of a better way)
+    // Check if move is valid
     if(new_row > 0 && new_row < MAZE_HEIGHT && new_col > 0 && new_col < MAZE_WIDTH && (new_row != player_row || new_col != player_col)) {
         if(maze[new_row][new_col] == WALL) {
             buzzer_play_tone(1000, 100);
@@ -270,7 +270,7 @@ void draw_player() {
 
         tft_fill_rect(player_col * CELL_WIDTH, player_row * CELL_HEIGHT, CELL_WIDTH, CELL_HEIGHT, COLOR_RED);
 
-        if(player_col == MAZE_WIDTH && player_row == MAZE_HEIGHT) {
+        if(player_col == MAZE_WIDTH - 1 && player_row == MAZE_HEIGHT - 2) {
             const uint32_t freqs[] = {523, 659, 784, 1046}; // C5, E5, G5, C6
             const uint32_t durs[] = {200, 200, 200, 400};
             buzzer_play_sequence(freqs, durs, 4);
@@ -308,8 +308,9 @@ int main() {
     sleep_ms(500);
 
     printf("Seeding RNG\n");
-    uint64_t seed = to_us_since_boot(get_absolute_time());
-    srand(seed);
+    //uint64_t seed = to_us_since_boot(get_absolute_time());
+    //srand(seed);
+    srand(42); // try making a static maze. Tested the code and worked fine with preset seed
 
     printf("Initializing maze grid\n");
     maze_init();
@@ -321,6 +322,9 @@ int main() {
     draw_maze();
 
     printf("Done\n");
+
+    maze[1][0] = PATH; //START
+    maze[MAZE_HEIGHT - 2][MAZE_WIDTH - 1] = PATH; // END
 
     tft_fill_rect(player_col * CELL_WIDTH, player_row * CELL_HEIGHT, CELL_WIDTH, CELL_HEIGHT, COLOR_RED);
     joystick_init();
