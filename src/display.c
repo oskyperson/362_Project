@@ -317,14 +317,13 @@ int main() {
 
     printf("Generating maze\n");
     carve_maze(1, 1);
+    maze[1][0] = PATH; //START
+    maze[MAZE_HEIGHT - 2][MAZE_WIDTH - 1] = PATH; // END
 
     printf("Drawing maze\n");
     draw_maze();
 
     printf("Done\n");
-
-    maze[1][0] = PATH; //START
-    maze[MAZE_HEIGHT - 2][MAZE_WIDTH - 1] = PATH; // END
 
     tft_fill_rect(player_col * CELL_WIDTH, player_row * CELL_HEIGHT, CELL_WIDTH, CELL_HEIGHT, COLOR_RED);
     joystick_init();
