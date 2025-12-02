@@ -250,10 +250,10 @@ void draw_player() {
     int new_col = player_col;
 
     // Values go from 0 to 4096, 2048 is the center
-    if(adc_x_raw < 1500) new_col--;
-    else if(adc_x_raw > 2500) new_col++;
-    if(adc_y_raw < 1500) new_row--;
-    else if(adc_y_raw > 2500) new_row++;
+    if(adc_x_raw < 2000) new_col--;
+    else if(adc_x_raw > 2100) new_col++;
+    if(adc_y_raw < 2000) new_row--;
+    else if(adc_y_raw > 2100) new_row++;
 
     // Check if move is valid
     if(new_row > 0 && new_row < MAZE_HEIGHT && new_col > 0 && new_col < MAZE_WIDTH && (new_row != player_row || new_col != player_col)) {
