@@ -6,9 +6,9 @@
 #include "hardware/timer.h"
 #include "hardware/adc.h"
 #include "buzzer.h"
+#include "init_sdcard.h"
+#include "highscore.h"
 
-//FOR USE WITH ST7789 CONTROLLER
-//the controller is ili9341
 
 #define MOSI 15
 #define SCK 14
@@ -39,8 +39,8 @@
 #define COLOR_RED 0xF800
 #define COLOR_BLUE 0x001F
 
-#define MAZE_WIDTH 59
-#define MAZE_HEIGHT 59
+#define MAZE_WIDTH 35
+#define MAZE_HEIGHT 35
 
 #define CELL_WIDTH (TFT_WIDTH / MAZE_WIDTH)
 #define CELL_HEIGHT (TFT_HEIGHT / MAZE_HEIGHT)
@@ -60,6 +60,11 @@ int moves = 0;
 
 uint adc_x_raw;
 uint adc_y_raw;
+
+void init_uart();
+void init_uart_irq();
+void date(int argc, char *argv[]);
+void command_shell();
 
 void joystick_init() {
     adc_init();
@@ -278,7 +283,16 @@ void draw_player() {
     }
 }
 
+char name[20];
+
 int main() {
+    init_uart();
+    init_uart_irq();
+    
+    init_sdcard_io();
+    
+    // SD card functions will initialize everything.
+    command_shell();
     stdio_init_all();
     sleep_ms(1000);
     printf("Initializing\n");
@@ -298,7 +312,7 @@ int main() {
     gpio_init(RST);
     gpio_set_dir(RST, GPIO_OUT);
 
-    buzzer_init(15); // change whatever the buzzer pin is
+    //buzzer_init(15); // change whatever the buzzer pin is
 
     printf("SPI and GPIO initialized\n");
 
@@ -333,9 +347,11 @@ int main() {
         joystick_read();
         draw_player();
         buzzer_update();
-        sleep_ms(225);
+        sleep_ms(200);
         
     }
+
+
 
     return 0;
 }
