@@ -5,9 +5,14 @@
 #include "hardware/gpio.h"
 #include "hardware/timer.h"
 #include "hardware/adc.h"
+#include "buzzer.h"
+#include "init_sdcard.h"
+#include "highscore.h"
 
-//FOR USE WITH ST7789 CONTROLLER
-//the controller is ili9341
+#include "ff.h"
+#include "diskio.h"
+#include <string.h>
+
 
 #define MOSI 15
 #define SCK 14
@@ -38,8 +43,8 @@
 #define COLOR_RED 0xF800
 #define COLOR_BLUE 0x001F
 
-#define MAZE_WIDTH 59
-#define MAZE_HEIGHT 59
+#define MAZE_WIDTH 35
+#define MAZE_HEIGHT 35
 
 #define CELL_WIDTH (TFT_WIDTH / MAZE_WIDTH)
 #define CELL_HEIGHT (TFT_HEIGHT / MAZE_HEIGHT)
@@ -53,12 +58,18 @@
 #define SW 43
 
 uint8_t maze[MAZE_HEIGHT][MAZE_WIDTH];
+uint8_t maze_copy[MAZE_HEIGHT][MAZE_WIDTH];
 int player_row = 1;
-int player_col = 1;
+int player_col = 0;
 int moves = 0;
 
 uint adc_x_raw;
 uint adc_y_raw;
+
+void init_uart();
+void init_uart_irq();
+void date(int argc, char *argv[]);
+void command_shell();
 
 void joystick_init() {
     adc_init();
@@ -233,7 +244,7 @@ void draw_maze() {
             if (maze_x >= MAZE_WIDTH || maze_y >= MAZE_HEIGHT) {
                 color = COLOR_BLACK; 
             } else {
-                color = (maze[maze_y][maze_x] == WALL) ? COLOR_BLACK : COLOR_WHITE;
+                color = (maze[maze_y][maze_x] == WALL) ? COLOR_WHITE : COLOR_BLACK;
             }
 
             uint8_t pixel_data[] = {color >> 8, color & 0xFF};
@@ -249,28 +260,57 @@ void draw_player() {
     int new_col = player_col;
 
     // Values go from 0 to 4096, 2048 is the center
-    if(adc_x_raw < 1500) new_col--;
-    else if(adc_x_raw > 2500) new_col++;
-    if(adc_y_raw < 1500) new_row--;
-    else if(adc_y_raw > 2500) new_row++;
+    if(adc_x_raw < 2000) new_col--;
+    else if(adc_x_raw > 2100) new_col++;
+    if(adc_y_raw < 2000) new_row--;
+    else if(adc_y_raw > 2100) new_row++;
 
-    // Check if valid (very long but I couldn't think of a better way)
-    if(new_row > 0 && new_row < MAZE_HEIGHT && new_col > 0 && new_col < MAZE_WIDTH && (new_row != player_row || new_col != player_col) && maze[new_row][new_col] == 1) {
+    // Check if move is valid
+    if(new_row > 0 && new_row < MAZE_HEIGHT && new_col > 0 && new_col < MAZE_WIDTH && (new_row != player_row || new_col != player_col)) {
+        if(maze[new_row][new_col] == WALL) {
+            buzzer_play_tone(1000, 100);
+        } else {
 
-        tft_fill_rect(player_col * CELL_WIDTH, player_row * CELL_HEIGHT, CELL_WIDTH, CELL_HEIGHT, COLOR_BLUE); 
+            tft_fill_rect(player_col * CELL_WIDTH, player_row * CELL_HEIGHT, CELL_WIDTH, CELL_HEIGHT, COLOR_BLUE); 
 
-        player_row = new_row;
-        player_col = new_col;
-        moves++;
+            player_row = new_row;
+            player_col = new_col;
+            moves++;
 
-        tft_fill_rect(player_col * CELL_WIDTH, player_row * CELL_HEIGHT, CELL_WIDTH, CELL_HEIGHT, COLOR_RED);
+            tft_fill_rect(player_col * CELL_WIDTH, player_row * CELL_HEIGHT, CELL_WIDTH, CELL_HEIGHT, COLOR_RED);
+
+        if(player_col == MAZE_WIDTH - 1 && player_row == MAZE_HEIGHT - 2) {
+            const uint32_t freqs[] = {523, 659, 784, 1046}; // C5, E5, G5, C6
+            const uint32_t durs[] = {200, 200, 200, 400};
+            buzzer_play_sequence(freqs, durs, 4);
+        }
     }
 }
 
 int main() {
+    init_uart();
+    init_uart_irq();
+    
+    init_sdcard_io();
+    
+    // SD card functions will initialize everything.
+    command_shell();
+
     stdio_init_all();
     sleep_ms(1000);
     printf("Initializing\n");
+
+    /*------ SD CARD LOADING STUFF -----*/
+    DSTATUS stat = disk_initialize(1);
+    if(stat != 0){
+        printf("UGH SD NO WORK: %d", stat);
+    }
+
+    readMaze(1);
+
+    memcpy(maze, maze_copy, sizeof(int) * MAZE_HEIGHT * MAZE_WIDTH);
+
+
     fflush(stdout); 
 
     spi_init(spi1, 10 * 1000 * 1000); //changed
@@ -287,6 +327,8 @@ int main() {
     gpio_init(RST);
     gpio_set_dir(RST, GPIO_OUT);
 
+    //buzzer_init(15); // change whatever the buzzer pin is
+
     printf("SPI and GPIO initialized\n");
 
     tft_init();
@@ -295,14 +337,17 @@ int main() {
     sleep_ms(500);
 
     printf("Seeding RNG\n");
-    uint64_t seed = to_us_since_boot(get_absolute_time());
-    srand(seed);
+    //uint64_t seed = to_us_since_boot(get_absolute_time());
+    //srand(seed);
+    srand(42); // try making a static maze. Tested the code and worked fine with preset seed
 
     printf("Initializing maze grid\n");
     maze_init();
 
     printf("Generating maze\n");
     carve_maze(1, 1);
+    maze[1][0] = PATH; //START
+    maze[MAZE_HEIGHT - 2][MAZE_WIDTH - 1] = PATH; // END
 
     printf("Drawing maze\n");
     draw_maze();
@@ -312,13 +357,17 @@ int main() {
     tft_fill_rect(player_col * CELL_WIDTH, player_row * CELL_HEIGHT, CELL_WIDTH, CELL_HEIGHT, COLOR_RED);
     joystick_init();
 
-    while (1) {
+    while (player_col != MAZE_WIDTH - 1 || player_row != MAZE_HEIGHT - 2) {
         tight_loop_contents();
         joystick_read();
         draw_player();
-        sleep_ms(225);
+        buzzer_update();
+        sleep_ms(200);
         
     }
+
+    get_player_name(name);
+    append_to_file("score1.txt", name);
 
     return 0;
 }

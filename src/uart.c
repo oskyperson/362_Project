@@ -13,6 +13,7 @@ int newline_seen = 0;
 // add this here so that compiler does not complain about implicit function
 // in init_uart_irq
 void uart_rx_handler();
+void flush_uart_input();
 
 /*******************************************************************/
 
@@ -26,17 +27,12 @@ void init_uart() {
 }
 
 void init_uart_irq() {
-    // uart_set_fifo_enabled (uart0, false);
-    // int UART_IRQ = UART0_IRQ;
-    // uart0_hw->imsc = 1 << UART_UARTIMSC_RXIM_LSB;
-    // irq_set_exclusive_handler(UART_IRQ, uart_rx_handler);
-    // irq_set_enabled(UART_IRQ, true);
-    // uart_set_irq_enables(uart0, true, false);
-
-    uart_set_fifo_enabled(uart0, false);
+    uart_set_fifo_enabled (uart0, false);
+    int UART_IRQ = UART0_IRQ;
+    uart0_hw->imsc = 1 << UART_UARTIMSC_RXIM_LSB;
+    irq_set_exclusive_handler(UART_IRQ, uart_rx_handler);
+    irq_set_enabled(UART_IRQ, true);
     uart_set_irq_enables(uart0, true, false);
-    irq_set_exclusive_handler(UART0_IRQ, uart_rx_handler);
-    irq_set_enabled(UART0_IRQ, true);
 }
 
 void uart_rx_handler() {
@@ -62,63 +58,87 @@ void uart_rx_handler() {
     //     printf("%c", c);
     //     serbuf[seridx++] = c;
     // }
+    hw_clear_bits(&uart_get_hw(uart0)->icr, UART_UARTICR_RXIC_BITS);
 
-    uart_get_hw(uart0)->icr = 33;
+    while (uart_is_readable(uart0)) {
+        char c = uart_getc(uart0);
 
-    if (seridx >= BUFSIZE)
-        return;
+        if (c == '\r') {
+            // Convert CR into LF
+            serbuf[seridx++] = '\n';
+            uart_putc(uart0, '\n');
+            newline_seen = 1;
+            return;
+        }
 
-    char d = uart_get_hw(uart0)->dr;  
+        if (c == '\n') {
+            serbuf[seridx++] = '\n';
+            uart_putc(uart0, '\n');
+            newline_seen = 1;
+            return;
+        }
 
-    if (d == '\n') {
-        newline_seen = 1;
-    }
+        // Backspace
+        if (c == 8 || c == 127) {
+            if (seridx > 0) {
+                seridx--;
+                uart_puts(uart0, "\b \b");
+            }
+            continue;
+        }
 
-    if (d == 8 && seridx > 0) {
-        uart_putc(uart0, 8);  
-        uart_putc(uart0, 32);
-        uart_putc(uart0, 8);  
-        seridx--;              
-        serbuf[seridx] = '\0';
-    } else {
-        uart_putc(uart0, d);       
-        serbuf[seridx] = d; 
-        seridx++; 
+        // Normal char
+        if (seridx < BUFSIZE - 1) {
+            serbuf[seridx++] = c;
+            uart_putc(uart0, c);
+        }
     }
 }
 
 int _read(__unused int handle, char *buffer, int length) {
     // fill in.
-    while(newline_seen == 0){
-        sleep_ms(5);
-    }
-    if(newline_seen == 1){
-        newline_seen = 0;
+    // while(newline_seen == 0){
+    //     sleep_ms(5);
+    // }
+    // if(newline_seen == 1){
+    //     newline_seen = 0;
+    // }
+
+    // for(int i = 0; i< seridx; i++){
+    //     buffer[i] = serbuf[i];
+    // }
+    // seridx = 0;
+    // return length;
+        // Wait for a full line
+    while (!newline_seen) {
+        tight_loop_contents();
     }
 
-    int itr = length >= seridx ? seridx : length;
+    newline_seen = 0;
 
-    for (int i = 0; i < itr; i++) {
-        buffer[i] = serbuf[i]; 
-    }
+    // Copy serbuf into buffer WITH terminating 0
+    int n = seridx;
+    if (n > length - 1) n = length - 1;
+
+    memcpy(buffer, serbuf, n);
+    buffer[n] = '\0';
+
     seridx = 0;
+    memset(serbuf, 0, BUFSIZE);
 
-    return length;
+    return n;   // return actual number of bytes read
 }
 
 int _write(int handle, char *buffer, int length) {
-    // for (int i = 0; i < length; i++){
-    //     if (buffer[i] != '\0'){
-    //        uart_putc(uart0, buffer[i]);
-    //     }
-    //     else{
-    //         break;
-    //     }
-    // }
-
-    for (int i = 0; i < length; i++) {
-        uart_putc(uart0, buffer[i]); 
+    for (int i = 0; i < length; i++){
+        if (buffer[i] != '\0'){
+           uart_putc(uart0, buffer[i]);
+        }
+        else{
+            break;
+        }
     }
+    
     return length;
 }
 
@@ -180,6 +200,17 @@ void parse_command(const char* input) {
     }
 }
 
+void flush_uart_input() {
+    seridx = 0;
+    newline_seen = 0;
+    memset(serbuf, 0, BUFSIZE);
+
+    // Clear any unread chars in the hardware FIFO
+    while (uart_is_readable(uart0)) {
+        (void)uart_getc(uart0);
+    }
+}
+
 void command_shell() {
     char input[100];
     memset(input, 0, sizeof(input));
@@ -189,6 +220,7 @@ void command_shell() {
 
     printf("\nEnter current ");
     insert_echo_string("date 20250701120000");
+    flush_uart_input();
     fgets(input, 99, stdin);
     input[strcspn(input, "\r")] = 0; // Remove CR character
     input[strcspn(input, "\n")] = 0; // Remove newline character
@@ -196,10 +228,11 @@ void command_shell() {
     
     printf("SD Card Command Shell");
     printf("\r\nType 'mount' to mount the SD card.\n");
-    while (1) {
+    char str1[] = "mount";
+    while (strcmp(input, str1) != 0) {
         printf("\r\n> ");
+        flush_uart_input();
         fgets(input, sizeof(input), stdin);
-        fflush(stdin);
         input[strcspn(input, "\r")] = 0; // Remove CR character
         input[strcspn(input, "\n")] = 0; // Remove newline character
         
