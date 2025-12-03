@@ -6,13 +6,13 @@
 #include "hardware/timer.h"
 #include "hardware/adc.h"
 #include "buzzer.h"
+#include "init_sdcard.h"
+#include "highscore.h"
 
 #include "ff.h"
 #include "diskio.h"
 #include <string.h>
 
-//FOR USE WITH ST7789 CONTROLLER
-//the controller is ili9341
 
 #define MOSI 15
 #define SCK 14
@@ -43,8 +43,8 @@
 #define COLOR_RED 0xF800
 #define COLOR_BLUE 0x001F
 
-#define MAZE_WIDTH 59
-#define MAZE_HEIGHT 59
+#define MAZE_WIDTH 35
+#define MAZE_HEIGHT 35
 
 #define CELL_WIDTH (TFT_WIDTH / MAZE_WIDTH)
 #define CELL_HEIGHT (TFT_HEIGHT / MAZE_HEIGHT)
@@ -65,6 +65,11 @@ int moves = 0;
 
 uint adc_x_raw;
 uint adc_y_raw;
+
+void init_uart();
+void init_uart_irq();
+void date(int argc, char *argv[]);
+void command_shell();
 
 void joystick_init() {
     adc_init();
@@ -255,25 +260,24 @@ void draw_player() {
     int new_col = player_col;
 
     // Values go from 0 to 4096, 2048 is the center
-    if(adc_x_raw < 1500) new_col--;
-    else if(adc_x_raw > 2500) new_col++;
-    if(adc_y_raw < 1500) new_row--;
-    else if(adc_y_raw > 2500) new_row++;
+    if(adc_x_raw < 2000) new_col--;
+    else if(adc_x_raw > 2100) new_col++;
+    if(adc_y_raw < 2000) new_row--;
+    else if(adc_y_raw > 2100) new_row++;
 
     // Check if move is valid
     if(new_row > 0 && new_row < MAZE_HEIGHT && new_col > 0 && new_col < MAZE_WIDTH && (new_row != player_row || new_col != player_col)) {
         if(maze[new_row][new_col] == WALL) {
             buzzer_play_tone(1000, 100);
-            return;
-        }
+        } else {
 
-        tft_fill_rect(player_col * CELL_WIDTH, player_row * CELL_HEIGHT, CELL_WIDTH, CELL_HEIGHT, COLOR_BLUE); 
+            tft_fill_rect(player_col * CELL_WIDTH, player_row * CELL_HEIGHT, CELL_WIDTH, CELL_HEIGHT, COLOR_BLUE); 
 
-        player_row = new_row;
-        player_col = new_col;
-        moves++;
+            player_row = new_row;
+            player_col = new_col;
+            moves++;
 
-        tft_fill_rect(player_col * CELL_WIDTH, player_row * CELL_HEIGHT, CELL_WIDTH, CELL_HEIGHT, COLOR_RED);
+            tft_fill_rect(player_col * CELL_WIDTH, player_row * CELL_HEIGHT, CELL_WIDTH, CELL_HEIGHT, COLOR_RED);
 
         if(player_col == MAZE_WIDTH - 1 && player_row == MAZE_HEIGHT - 2) {
             const uint32_t freqs[] = {523, 659, 784, 1046}; // C5, E5, G5, C6
@@ -283,25 +287,14 @@ void draw_player() {
     }
 }
 
-void readMaze(BYTE pdrv){
-    BYTE* buff;
-    disk_read(pdrv, buff, 1, 2);
-    int counter = 0;
-    for(int i = 0; i < MAZE_HEIGHT; i++){
-        for(int j = 0; j < MAZE_WIDTH; j++){
-            if((buff[counter] != '\n') && (buff[counter] != '\r')){
-                maze_copy[i][j] = buff[counter];
-                counter++;
-            } else{
-                printf("hit EOF");
-                break;
-            }
-        }
-    }
-
-}
-
 int main() {
+    init_uart();
+    init_uart_irq();
+    
+    init_sdcard_io();
+    
+    // SD card functions will initialize everything.
+    command_shell();
     stdio_init_all();
     sleep_ms(1000);
     printf("Initializing\n");
@@ -333,7 +326,7 @@ int main() {
     gpio_init(RST);
     gpio_set_dir(RST, GPIO_OUT);
 
-    buzzer_init(15); // change whatever the buzzer pin is
+    //buzzer_init(15); // change whatever the buzzer pin is
 
     printf("SPI and GPIO initialized\n");
 
@@ -352,26 +345,27 @@ int main() {
 
     printf("Generating maze\n");
     carve_maze(1, 1);
+    maze[1][0] = PATH; //START
+    maze[MAZE_HEIGHT - 2][MAZE_WIDTH - 1] = PATH; // END
 
     printf("Drawing maze\n");
     draw_maze();
 
     printf("Done\n");
 
-    maze[1][0] = PATH; //START
-    maze[MAZE_HEIGHT - 2][MAZE_WIDTH - 1] = PATH; // END
-
     tft_fill_rect(player_col * CELL_WIDTH, player_row * CELL_HEIGHT, CELL_WIDTH, CELL_HEIGHT, COLOR_RED);
     joystick_init();
 
-    while (1) {
+    while (player_col != MAZE_WIDTH - 1 || player_row != MAZE_HEIGHT - 2) {
         tight_loop_contents();
         joystick_read();
         draw_player();
         buzzer_update();
-        sleep_ms(225);
+        sleep_ms(200);
         
     }
+
+
 
     return 0;
 }
