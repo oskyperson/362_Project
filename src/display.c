@@ -7,6 +7,10 @@
 #include "hardware/adc.h"
 #include "buzzer.h"
 
+#include "ff.h"
+#include "diskio.h"
+#include <string.h>
+
 //FOR USE WITH ST7789 CONTROLLER
 //the controller is ili9341
 
@@ -54,6 +58,7 @@
 #define SW 43
 
 uint8_t maze[MAZE_HEIGHT][MAZE_WIDTH];
+uint8_t maze_copy[MAZE_HEIGHT][MAZE_WIDTH];
 int player_row = 1;
 int player_col = 0;
 int moves = 0;
@@ -278,10 +283,40 @@ void draw_player() {
     }
 }
 
+void readMaze(BYTE pdrv){
+    BYTE* buff;
+    disk_read(pdrv, buff, 1, 2);
+    int counter = 0;
+    for(int i = 0; i < MAZE_HEIGHT; i++){
+        for(int j = 0; j < MAZE_WIDTH; j++){
+            if((buff[counter] != '\n') && (buff[counter] != '\r')){
+                maze_copy[i][j] = buff[counter];
+                counter++;
+            } else{
+                printf("hit EOF");
+                break;
+            }
+        }
+    }
+
+}
+
 int main() {
     stdio_init_all();
     sleep_ms(1000);
     printf("Initializing\n");
+
+    /*------ SD CARD LOADING STUFF -----*/
+    DSTATUS stat = disk_initialize(1);
+    if(stat != 0){
+        printf("UGH SD NO WORK: %d", stat);
+    }
+
+    readMaze(1);
+
+    memcpy(maze, maze_copy, sizeof(int) * MAZE_HEIGHT * MAZE_WIDTH);
+
+
     fflush(stdout); 
 
     spi_init(spi1, 10 * 1000 * 1000); //changed
