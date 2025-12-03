@@ -234,7 +234,7 @@ void draw_maze() {
             if (maze_x >= MAZE_WIDTH || maze_y >= MAZE_HEIGHT) {
                 color = COLOR_BLACK; 
             } else {
-                color = (maze[maze_y][maze_x] == WALL) ? COLOR_BLACK : COLOR_WHITE;
+                color = (maze[maze_y][maze_x] == WALL) ? COLOR_WHITE : COLOR_BLACK;
             }
 
             uint8_t pixel_data[] = {color >> 8, color & 0xFF};
