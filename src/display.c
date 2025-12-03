@@ -282,6 +282,7 @@ void draw_player() {
     }
 }
 
+char name [20];
 int main() {
     init_uart();
     init_uart_irq();
@@ -376,6 +377,8 @@ int main() {
 
     //get_player_name(name);
     //append_to_file("score1.txt", name);
+    get_player_name(name);
+    append_to_file("score1.txt", name, moves);
 
     return 0;
 }

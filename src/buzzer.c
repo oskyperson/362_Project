@@ -8,7 +8,7 @@
 #include "hardware/clocks.h"
 #endif
 
-static uint32_t g_buzzer_pin = 0;
+static uint32_t g_buzzer_pin = 35;
 static bool g_initialized = false;
 static volatile bool g_playing = false;
 
