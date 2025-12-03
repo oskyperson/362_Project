@@ -43,8 +43,8 @@
 #define COLOR_RED 0xF800
 #define COLOR_BLUE 0x001F
 
-#define MAZE_WIDTH 7
-#define MAZE_HEIGHT 7
+#define MAZE_WIDTH 15
+#define MAZE_HEIGHT 15
 
 #define CELL_WIDTH (TFT_WIDTH / MAZE_WIDTH)
 #define CELL_HEIGHT (TFT_HEIGHT / MAZE_HEIGHT)
@@ -374,11 +374,8 @@ int main() {
     }
     
     
-
     //get_player_name(name);
-    //append_to_file("score1.txt", name);
-    get_player_name(name);
-    append_to_file("score1.txt", name, moves);
+    append_to_file("score1.txt", moves);
 
     return 0;
 }

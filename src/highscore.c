@@ -5,7 +5,7 @@
 #include "ff.h"
 
 
-void append_to_file(const char *filename, char *name, int score)
+void append_to_file(const char *filename, int score)
 {
     FIL fil;
     FRESULT fr;
@@ -17,8 +17,8 @@ void append_to_file(const char *filename, char *name, int score)
         return;
     }
 
-    char line[128];
-    snprintf(line, sizeof(line), "%s %d\n", name, score);
+    char line[20];
+    snprintf(line, sizeof(line), "%d\n", score);
 
     // Write to file
     UINT wlen;
@@ -31,13 +31,13 @@ void append_to_file(const char *filename, char *name, int score)
 }
 
 
-void get_player_name(char *username) {
-    printf("Enter name: ");
-    if (fgets(username, 20, stdin) == NULL){
-        printf("Error: failed to read name.\n");
-        username[0] = '\0';
-        return;
-    }
+// void get_player_name(char *username) {
+//     printf("Enter name: ");
+//     if (fgets(username, 20, stdin) == NULL){
+//         printf("Error: failed to read name.\n");
+//         username[0] = '\0';
+//         return;
+//     }
 
-    username[strcspn(username, "\n")] = 0;
-}
+//     username[strcspn(username, "\n")] = 0;
+// }

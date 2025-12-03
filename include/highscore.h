@@ -7,7 +7,7 @@
 #include "diskio.h"
 #include "init_sdcard.h"
 
-void append_to_file(const char *filename, char *name, int moves);
+void append_to_file(const char *filename, int moves);
 void get_player_name(char *username);
 
 #endif
