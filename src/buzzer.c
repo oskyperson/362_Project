@@ -115,27 +115,27 @@ void buzzer_play_tone(uint32_t freq_hz, uint32_t duration_ms)
     (void)duration_ms;
 #endif
 }
-static void buzzer_play_rising_sweep(uint32_t start_freq,
-                                     uint32_t end_freq,
-                                     uint32_t sweep_time_ms,
-                                     uint32_t step_ms)
-{
-    uint32_t steps = sweep_time_ms / step_ms;
-    if (steps < 1) steps = 1;
-    if (steps > 256) steps = 256;
+// static void buzzer_play_rising_sweep(uint32_t start_freq,
+//                                      uint32_t end_freq,
+//                                      uint32_t sweep_time_ms,
+//                                      uint32_t step_ms)
+// {
+//     uint32_t steps = sweep_time_ms / step_ms;
+//     if (steps < 1) steps = 1;
+//     if (steps > 256) steps = 256;
 
-    float delta = (float)(end_freq - start_freq) / (float)steps;
+//     float delta = (float)(end_freq - start_freq) / (float)steps;
 
-    static uint32_t freqs[256];
-    static uint32_t durs[256];
+//     static uint32_t freqs[256];
+//     static uint32_t durs[256];
 
-    for (uint32_t i = 0; i < steps; i++) {
-        freqs[i] = (uint32_t)(start_freq + delta * i);
-        durs[i]  = step_ms;
-    }
+//     for (uint32_t i = 0; i < steps; i++) {
+//         freqs[i] = (uint32_t)(start_freq + delta * i);
+//         durs[i]  = step_ms;
+//     }
 
-    buzzer_play_sequence(freqs, durs, steps);
-}
+//     buzzer_play_sequence(freqs, durs, steps);
+// }
 
 void buzzer_play_sequence(const uint32_t *freqs,
                           const uint32_t *durations_ms,
@@ -181,7 +181,7 @@ void buzzer_stop(void)
     g_seq_index = 0;
 
     // Rising sweep ending sound: 600 Hz → 1800 Hz over 200 ms
-    buzzer_play_rising_sweep(600, 1800, 200, 10);
+    //buzzer_play_rising_sweep(600, 1800, 200, 10);
 #endif
 
     g_playing = false;

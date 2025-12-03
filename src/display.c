@@ -43,8 +43,8 @@
 #define COLOR_RED 0xF800
 #define COLOR_BLUE 0x001F
 
-#define MAZE_WIDTH 35
-#define MAZE_HEIGHT 35
+#define MAZE_WIDTH 7
+#define MAZE_HEIGHT 7
 
 #define CELL_WIDTH (TFT_WIDTH / MAZE_WIDTH)
 #define CELL_HEIGHT (TFT_HEIGHT / MAZE_HEIGHT)
@@ -260,10 +260,10 @@ void draw_player() {
     int new_col = player_col;
 
     // Values go from 0 to 4096, 2048 is the center
-    if(adc_x_raw < 2000) new_col--;
-    else if(adc_x_raw > 2100) new_col++;
-    if(adc_y_raw < 2000) new_row--;
-    else if(adc_y_raw > 2100) new_row++;
+    if(adc_x_raw < 1900) new_col--;
+    else if(adc_x_raw > 2200) new_col++;
+    if(adc_y_raw < 1900) new_row--;
+    else if(adc_y_raw > 2200) new_row++;
 
     // Check if move is valid
     if(new_row > 0 && new_row < MAZE_HEIGHT && new_col > 0 && new_col < MAZE_WIDTH && (new_row != player_row || new_col != player_col)) {
@@ -278,11 +278,6 @@ void draw_player() {
             moves++;
 
             tft_fill_rect(player_col * CELL_WIDTH, player_row * CELL_HEIGHT, CELL_WIDTH, CELL_HEIGHT, COLOR_RED);
-
-        if(player_col == MAZE_WIDTH - 1 && player_row == MAZE_HEIGHT - 2) {
-            const uint32_t freqs[] = {523, 659, 784, 1046}; // C5, E5, G5, C6
-            const uint32_t durs[] = {200, 200, 200, 400};
-            buzzer_play_sequence(freqs, durs, 4);
         }
     }
 }
@@ -306,7 +301,7 @@ int main() {
         printf("UGH SD NO WORK: %d", stat);
     }
 
-    readMaze(1);
+    //readMaze(1);
 
     memcpy(maze, maze_copy, sizeof(int) * MAZE_HEIGHT * MAZE_WIDTH);
 
@@ -327,7 +322,7 @@ int main() {
     gpio_init(RST);
     gpio_set_dir(RST, GPIO_OUT);
 
-    //buzzer_init(15); // change whatever the buzzer pin is
+    buzzer_init(35); // change whatever the buzzer pin is
 
     printf("SPI and GPIO initialized\n");
 
@@ -366,8 +361,21 @@ int main() {
         
     }
 
-    get_player_name(name);
-    append_to_file("score1.txt", name);
+    tft_fill_screen(COLOR_RED);
+
+    const uint32_t freqs[] = {523, 659, 784, 988, 1046};
+    const uint32_t durs[]  = {80, 80, 80, 80, 140};
+
+    for (int i = 0; i < 5; i++) {
+        buzzer_play_tone(freqs[i], durs[i]);
+        sleep_ms(durs[i]);
+        buzzer_update();
+    }
+    
+    
+
+    //get_player_name(name);
+    //append_to_file("score1.txt", name);
 
     return 0;
 }
