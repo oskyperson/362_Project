@@ -328,7 +328,7 @@ int main() {
     tft_fill_rect(player_col * CELL_WIDTH, player_row * CELL_HEIGHT, CELL_WIDTH, CELL_HEIGHT, COLOR_RED);
     joystick_init();
 
-    while (1) {
+    while (player_col != MAZE_WIDTH - 1 || player_row != MAZE_HEIGHT - 2) {
         tight_loop_contents();
         joystick_read();
         draw_player();
