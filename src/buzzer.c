@@ -25,6 +25,11 @@ static size_t g_seq_index = 0;
 
 static void buzzer_start_tone(uint32_t freq_hz, uint32_t duration_ms)
 {
+    // Enforce max 1 second duration
+    if (duration_ms > 1000) {
+        duration_ms = 1000;
+    }
+
     if (freq_hz == 0) {
         pwm_set_chan_level(g_slice, g_channel, 0);
         pwm_set_enabled(g_slice, false);
@@ -59,6 +64,7 @@ static void buzzer_start_tone(uint32_t freq_hz, uint32_t duration_ms)
         g_has_end_time = false;
     }
 }
+
 #endif
 
 void buzzer_init(uint32_t gpio_pin)
@@ -84,6 +90,7 @@ void buzzer_init(uint32_t gpio_pin)
 
 void buzzer_play_tone(uint32_t freq_hz, uint32_t duration_ms)
 {
+   
     if (!g_initialized) {
         return;
     }
@@ -107,6 +114,27 @@ void buzzer_play_tone(uint32_t freq_hz, uint32_t duration_ms)
     }
     (void)duration_ms;
 #endif
+}
+static void buzzer_play_rising_sweep(uint32_t start_freq,
+                                     uint32_t end_freq,
+                                     uint32_t sweep_time_ms,
+                                     uint32_t step_ms)
+{
+    uint32_t steps = sweep_time_ms / step_ms;
+    if (steps < 1) steps = 1;
+    if (steps > 256) steps = 256;
+
+    float delta = (float)(end_freq - start_freq) / (float)steps;
+
+    static uint32_t freqs[256];
+    static uint32_t durs[256];
+
+    for (uint32_t i = 0; i < steps; i++) {
+        freqs[i] = (uint32_t)(start_freq + delta * i);
+        durs[i]  = step_ms;
+    }
+
+    buzzer_play_sequence(freqs, durs, steps);
 }
 
 void buzzer_play_sequence(const uint32_t *freqs,
@@ -151,6 +179,9 @@ void buzzer_stop(void)
     g_seq_durs = NULL;
     g_seq_count = 0;
     g_seq_index = 0;
+
+    // Rising sweep ending sound: 600 Hz → 1800 Hz over 200 ms
+    buzzer_play_rising_sweep(600, 1800, 200, 10);
 #endif
 
     g_playing = false;
