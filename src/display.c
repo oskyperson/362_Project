@@ -295,6 +295,7 @@ int main() {
     
     // SD card functions will initialize everything.
     command_shell();
+
     stdio_init_all();
     sleep_ms(1000);
     printf("Initializing\n");
@@ -365,7 +366,8 @@ int main() {
         
     }
 
-
+    get_player_name(name);
+    append_to_file("score1.txt", name);
 
     return 0;
 }

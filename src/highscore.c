@@ -1,83 +1,33 @@
 #include <stdio.h>
 #include <stdlib.h>
-#define MAX_SCORES 100
+#include <string.h>
+#include "sdcard.h"
+#include "ff.h"
 
-typedef struct {
-    char name[20];
-    int score;
-} ScoreEntry;
 
-char username [20];
+void append_to_file(const char *filename, char *name)
+{
+    FIL fil;
+    char line[100];
+    FRESULT fr;
 
-ScoreEntry scores[MAX_SCORES];
-int scoreCount = 0;
-
-void load_scores(const char *filename) {
-    FILE *fp = fopen(filename, "r");
-    if (!fp) {
-        scoreCount = 0;  // no file yet
+    // Open file in append mode
+    fr = f_open(&fil, filename, FA_WRITE | FA_OPEN_EXISTING | FA_OPEN_APPEND);
+    if (fr) {
+        print_error(fr, filename);
         return;
     }
 
-    scoreCount = 0;
-    while (scoreCount < MAX_SCORES &&
-           fscanf(fp, "%19s %d", scores[scoreCount].name,
-                                 &scores[scoreCount].score) == 2)
-    {
-        scoreCount++;
+    // Write to file
+    UINT wlen;
+    fr = f_write(&fil, name, strlen(name), &wlen);
+    if (fr || wlen != strlen(name)) {
+        print_error(fr, filename);
     }
 
-    fclose(fp);
+    f_close(&fil);
 }
 
-void add_score(const char *filename, const char *playerName, int score) {
-    load_scores(filename);
-
-    if (scoreCount < MAX_SCORES) {
-        strcpy(scores[scoreCount].name, playerName);
-        scores[scoreCount].score = score;
-        scoreCount++;
-    }
-    else {
-        sort_scores();
-
-        if (score < scores[scoreCount - 1].score) {
-            strcpy(scores[scoreCount - 1].name, playerName);
-            scores[scoreCount - 1].score = score;
-        }
-    }
-
-    sort_scores();
-    save_scores(filename);
-}
-
-int compare_scores(const void *a, const void *b) {
-    const ScoreEntry *A = (const ScoreEntry *)a;
-    const ScoreEntry *B = (const ScoreEntry *)b;
-
-    return A->score - B->score;
-}
-
-void sort_scores() {
-    qsort(scores, scoreCount, sizeof(ScoreEntry), compare_scores);
-}
-
-void save_scores(const char *filename) {
-    FILE *fp = fopen(filename, "w");
-    if (!fp) return;
-
-    for (int i = 0; i < scoreCount; i++) {
-        fprintf(fp, "%s %d\n", scores[i].name, scores[i].score);
-    }
-
-    fclose(fp);
-}
-
-void print_scores() {
-    for (int i = 0; i < scoreCount; i++) {
-        printf("%d. %s - %d\n", i+1, scores[i].name, scores[i].score);
-    }
-}
 
 void get_player_name(char *username) {
     printf("Enter name: ");
