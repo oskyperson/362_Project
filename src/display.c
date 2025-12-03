@@ -286,7 +286,9 @@ void draw_player() {
         }
     }
 }
+}
 
+char name [20];
 int main() {
     init_uart();
     init_uart_irq();
@@ -327,7 +329,7 @@ int main() {
     gpio_init(RST);
     gpio_set_dir(RST, GPIO_OUT);
 
-    //buzzer_init(15); // change whatever the buzzer pin is
+    buzzer_init(35); // change whatever the buzzer pin is
 
     printf("SPI and GPIO initialized\n");
 
@@ -367,7 +369,7 @@ int main() {
     }
 
     get_player_name(name);
-    append_to_file("score1.txt", name);
+    append_to_file("score1.txt", name, moves);
 
     return 0;
 }

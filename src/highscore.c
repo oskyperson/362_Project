@@ -5,10 +5,9 @@
 #include "ff.h"
 
 
-void append_to_file(const char *filename, char *name)
+void append_to_file(const char *filename, char *name, int score)
 {
     FIL fil;
-    char line[100];
     FRESULT fr;
 
     // Open file in append mode
@@ -18,10 +17,13 @@ void append_to_file(const char *filename, char *name)
         return;
     }
 
+    char line[128];
+    snprintf(line, sizeof(line), "%s %d\n", name, score);
+
     // Write to file
     UINT wlen;
-    fr = f_write(&fil, name, strlen(name), &wlen);
-    if (fr || wlen != strlen(name)) {
+    fr = f_write(&fil, line, strlen(line), &wlen);
+    if (fr || wlen != strlen(line)) {
         print_error(fr, filename);
     }
 
