@@ -6,13 +6,9 @@
 #include "hardware/timer.h"
 #include "hardware/adc.h"
 #include "buzzer.h"
-#include "init_sdcard.h"
-#include "highscore.h"
 
-#include "ff.h"
-#include "diskio.h"
-#include <string.h>
-
+//FOR USE WITH ST7789 CONTROLLER
+//the controller is ili9341
 
 #define MOSI 15
 #define SCK 14
@@ -43,8 +39,8 @@
 #define COLOR_RED 0xF800
 #define COLOR_BLUE 0x001F
 
-#define MAZE_WIDTH 35
-#define MAZE_HEIGHT 35
+#define MAZE_WIDTH 59
+#define MAZE_HEIGHT 59
 
 #define CELL_WIDTH (TFT_WIDTH / MAZE_WIDTH)
 #define CELL_HEIGHT (TFT_HEIGHT / MAZE_HEIGHT)
@@ -58,18 +54,12 @@
 #define SW 43
 
 uint8_t maze[MAZE_HEIGHT][MAZE_WIDTH];
-uint8_t maze_copy[MAZE_HEIGHT][MAZE_WIDTH];
 int player_row = 1;
 int player_col = 0;
 int moves = 0;
 
 uint adc_x_raw;
 uint adc_y_raw;
-
-void init_uart();
-void init_uart_irq();
-void date(int argc, char *argv[]);
-void command_shell();
 
 void joystick_init() {
     adc_init();
@@ -279,37 +269,19 @@ void draw_player() {
 
             tft_fill_rect(player_col * CELL_WIDTH, player_row * CELL_HEIGHT, CELL_WIDTH, CELL_HEIGHT, COLOR_RED);
 
-        if(player_col == MAZE_WIDTH - 1 && player_row == MAZE_HEIGHT - 2) {
-            const uint32_t freqs[] = {523, 659, 784, 1046}; // C5, E5, G5, C6
-            const uint32_t durs[] = {200, 200, 200, 400};
-            buzzer_play_sequence(freqs, durs, 4);
+            if(player_col == MAZE_WIDTH - 1 && player_row == MAZE_HEIGHT - 2) {
+                const uint32_t freqs[] = {523, 659, 784, 1046}; // C5, E5, G5, C6
+                const uint32_t durs[] = {200, 200, 200, 400};
+                buzzer_play_sequence(freqs, durs, 4);
+            }
         }
     }
 }
 
 int main() {
-    init_uart();
-    init_uart_irq();
-    
-    init_sdcard_io();
-    
-    // SD card functions will initialize everything.
-    command_shell();
     stdio_init_all();
     sleep_ms(1000);
     printf("Initializing\n");
-
-    /*------ SD CARD LOADING STUFF -----*/
-    DSTATUS stat = disk_initialize(1);
-    if(stat != 0){
-        printf("UGH SD NO WORK: %d", stat);
-    }
-
-    readMaze(1);
-
-    memcpy(maze, maze_copy, sizeof(int) * MAZE_HEIGHT * MAZE_WIDTH);
-
-
     fflush(stdout); 
 
     spi_init(spi1, 10 * 1000 * 1000); //changed
@@ -326,7 +298,7 @@ int main() {
     gpio_init(RST);
     gpio_set_dir(RST, GPIO_OUT);
 
-    //buzzer_init(15); // change whatever the buzzer pin is
+    buzzer_init(15); // change whatever the buzzer pin is
 
     printf("SPI and GPIO initialized\n");
 
@@ -361,11 +333,9 @@ int main() {
         joystick_read();
         draw_player();
         buzzer_update();
-        sleep_ms(200);
+        sleep_ms(225);
         
     }
-
-
 
     return 0;
 }
